@@ -1,0 +1,64 @@
+============================================================
+          PORTFOLIO RISK & PERFORMANCE REPORT
+============================================================
+
+--- PORTFOLIO COMPOSITION ---
+  BHARTIARTL.NS: 10.00%
+  DRREDDY.NS: 10.00%
+  ULTRACEMCO.NS: 7.65%
+  GRASIM.NS: 4.91%
+  TITAN.NS: 10.00%
+  WIPRO.NS: 2.16%
+  SBIN.NS: 1.00%
+  ETERNAL.NS: 1.73%
+  ITC.NS: 10.00%
+  SUNPHARMA.NS: 10.00%
+  TCS.NS: 10.00%
+  HDFCBANK.NS: 10.00%
+  TRENT.NS: 1.55%
+  JSWSTEEL.NS: 1.00%
+  ICICIBANK.NS: 10.00%
+
+--- PERFORMANCE METRICS ---
+  CAGR:                  28.06%
+  Annualized Volatility: 10.72%
+  Sharpe Ratio (Rf=4%):  1.9881
+  Sortino Ratio (Rf=4%): 3.0595
+
+--- RISK METRICS ---
+  Historical VaR (95%):  0.97%
+  Parametric VaR (95%):  1.01%
+  Historical CVaR (95%): 1.39%
+  Portfolio Beta:        0.7910
+  Maximum Drawdown:      -9.11%
+
+--- STRESS TESTING SCENARIOS ---
+  Market Crash (-30%)   : 1.1323 (based on portfolio cumulative return)
+  Interest Rate Shock (-10%): 1.4558 (based on portfolio cumulative return)
+  Recession Shock (-20%): 1.2940 (based on portfolio cumulative return)
+
+--- PERFORMANCE ATTRIBUTION ---
+  Momentum   Mean Daily Return Contribution: 0.0082% (2.06% annualized)
+  Volatility Mean Daily Return Contribution: -0.0281% (-7.09% annualized)
+  Value      Mean Daily Return Contribution: -0.0007% (-0.17% annualized)
+  Quality    Mean Daily Return Contribution: -0.0020% (-0.50% annualized)
+
+--- CORRELATION MATRIX ---
+               BHARTIARTL.NS  DRREDDY.NS  ULTRACEMCO.NS  GRASIM.NS  TITAN.NS  WIPRO.NS  SBIN.NS  ETERNAL.NS  ITC.NS  SUNPHARMA.NS  TCS.NS  HDFCBANK.NS  TRENT.NS  JSWSTEEL.NS  ICICIBANK.NS
+BHARTIARTL.NS         1.0000      0.1635         0.2672     0.2864    0.2362    0.2282   0.2598      0.1353  0.2288        0.2414  0.1901       0.2269    0.2025       0.3068        0.3299
+DRREDDY.NS            0.1635      1.0000         0.2060     0.2135    0.1108    0.2521   0.1025      0.1010  0.1766        0.3595  0.1768       0.1337    0.1236       0.2442        0.0149
+ULTRACEMCO.NS         0.2672      0.2060         1.0000     0.5704    0.3236    0.2766   0.3666      0.1699  0.1933        0.1947  0.2058       0.3153    0.2519       0.4691        0.3596
+GRASIM.NS             0.2864      0.2135         0.5704     1.0000    0.3467    0.2538   0.4088      0.1255  0.2342        0.2232  0.1938       0.3097    0.2474       0.4761        0.3757
+TITAN.NS              0.2362      0.1108         0.3236     0.3467    1.0000    0.2152   0.2482      0.1369  0.2422        0.1973  0.1428       0.1964    0.2247       0.2854        0.1644
+WIPRO.NS              0.2282      0.2521         0.2766     0.2538    0.2152    1.0000   0.2520      0.1498  0.2002        0.1907  0.6016       0.2408    0.1646       0.3326        0.2330
+SBIN.NS               0.2598      0.1025         0.3666     0.4088    0.2482    0.2520   1.0000      0.1918  0.2087        0.1274  0.1694       0.3547    0.2561       0.3790        0.4900
+ETERNAL.NS            0.1353      0.1010         0.1699     0.1255    0.1369    0.1498   0.1918      1.0000  0.0882        0.1550  0.1360       0.2335    0.1066       0.1383        0.1303
+ITC.NS                0.2288      0.1766         0.1933     0.2342    0.2422    0.2002   0.2087      0.0882  1.0000        0.1710  0.1438       0.1047    0.1595       0.2702        0.2396
+SUNPHARMA.NS          0.2414      0.3595         0.1947     0.2232    0.1973    0.1907   0.1274      0.1550  0.1710        1.0000  0.1689       0.0932    0.1990       0.1967        0.1227
+TCS.NS                0.1901      0.1768         0.2058     0.1938    0.1428    0.6016   0.1694      0.1360  0.1438        0.1689  1.0000       0.1299    0.1272       0.2087        0.1865
+HDFCBANK.NS           0.2269      0.1337         0.3153     0.3097    0.1964    0.2408   0.3547      0.2335  0.1047        0.0932  0.1299       1.0000    0.1261       0.3542        0.4216
+TRENT.NS              0.2025      0.1236         0.2519     0.2474    0.2247    0.1646   0.2561      0.1066  0.1595        0.1990  0.1272       0.1261    1.0000       0.2571        0.1497
+JSWSTEEL.NS           0.3068      0.2442         0.4691     0.4761    0.2854    0.3326   0.3790      0.1383  0.2702        0.1967  0.2087       0.3542    0.2571       1.0000        0.3522
+ICICIBANK.NS          0.3299      0.0149         0.3596     0.3757    0.1644    0.2330   0.4900      0.1303  0.2396        0.1227  0.1865       0.4216    0.1497       0.3522        1.0000
+
+============================================================

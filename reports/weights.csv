@@ -1,0 +1,49 @@
+Ticker,Weight,Sector,Selected
+ADANIENT.NS,0.0,Conglomerates,False
+ADANIPORTS.NS,0.0,Infrastructure,False
+APOLLOHOSP.NS,0.0,Healthcare,False
+ASIANPAINT.NS,0.0,Consumer Goods,False
+AXISBANK.NS,0.0,Financial Services,False
+BAJAJ-AUTO.NS,0.0,Automobile,False
+BAJFINANCE.NS,0.0,Financial Services,False
+BAJAJFINSV.NS,0.0,Financial Services,False
+BEL.NS,0.0,Industrials,False
+BHARTIARTL.NS,0.09999999998151549,Telecommunication,True
+CIPLA.NS,0.0,Healthcare,False
+COALINDIA.NS,0.0,Energy,False
+DRREDDY.NS,0.09999999999107151,Healthcare,True
+EICHERMOT.NS,0.0,Automobile,False
+ETERNAL.NS,0.01731854551564527,Other,True
+GRASIM.NS,0.04907240313472213,Materials,True
+HCLTECH.NS,0.0,Information Technology,False
+HDFCBANK.NS,0.09999999997250653,Financial Services,True
+HDFCLIFE.NS,0.0,Financial Services,False
+HEROMOTOCO.NS,0.0,Automobile,False
+HINDALCO.NS,0.0,Materials,False
+HINDUNILVR.NS,0.0,Consumer Goods,False
+ICICIBANK.NS,0.09999999997119152,Financial Services,True
+INDUSINDBK.NS,0.0,Financial Services,False
+INFY.NS,0.0,Information Technology,False
+ITC.NS,0.09999999998803732,Consumer Goods,True
+JSWSTEEL.NS,0.010000000020474839,Materials,True
+KOTAKBANK.NS,0.0,Financial Services,False
+LT.NS,0.0,Infrastructure,False
+M&M.NS,0.0,Automobile,False
+MARUTI.NS,0.0,Automobile,False
+NESTLEIND.NS,0.0,Consumer Goods,False
+NTPC.NS,0.0,Utilities,False
+ONGC.NS,0.0,Energy,False
+POWERGRID.NS,0.0,Utilities,False
+RELIANCE.NS,0.0,Energy,False
+SBILIFE.NS,0.0,Financial Services,False
+SBIN.NS,0.010000000079340076,Financial Services,True
+SHRIRAMFIN.NS,0.0,Financial Services,False
+SUNPHARMA.NS,0.09999999998884135,Healthcare,True
+TATACONSUM.NS,0.0,Consumer Goods,False
+TATASTEEL.NS,0.0,Materials,False
+TCS.NS,0.09999999998404935,Information Technology,True
+TECHM.NS,0.0,Information Technology,False
+TITAN.NS,0.09999999997691653,Consumer Goods,True
+TRENT.NS,0.01554442163913199,Retail,True
+ULTRACEMCO.NS,0.07648467918477439,Materials,True
+WIPRO.NS,0.021579950571781765,Information Technology,True
