@@ -1,151 +1,204 @@
+"""
+AlphaForge | Portfolio Construction & Optimization
+Multi-Model Optimization: Max Sharpe, Minimum Volatility, and Hierarchical Risk Parity (HRP).
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
-import os
+import plotly.express as px
+
+from helper import inject_custom_theme
+from sidebar import render_sidebar, get_or_run_quant_results
 
 st.set_page_config(page_title="AlphaForge - Portfolio Optimization", page_icon="⚖️", layout="wide")
+inject_custom_theme()
 
-rf = 0.04
+# Render Unified Sidebar
+ticker, company, exchange, period, interval, region = render_sidebar()
 
-st.markdown("""
-# ⚖️ Portfolio Construction & Optimization
-This page details how factor-derived expected returns are combined with historical asset covariance to construct the optimal portfolio weights using a constrained Mean-Variance Optimizer.
-""")
+# Fetch active quantitative factor results
+results = get_or_run_quant_results()
+weights_df = results["weights_df"]
+frontier_df = results["frontier_df"]
+factors_df = results["factors_df"]
+rf = results.get("rf", 0.065 if region == "India" else 0.040)
+currency_symbol = results.get("currency_symbol", "₹" if region == "India" else "$")
+opt_model = results.get("optimization_model", "Sharpe")
 
-reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
-er_path = os.path.join(reports_dir, "expected_returns.csv")
-weights_path = os.path.join(reports_dir, "weights.csv")
-frontier_path = os.path.join(reports_dir, "frontier.csv")
+st.markdown(f"# ⚖️ Portfolio Construction & Optimization — {region.upper()}")
+st.caption(f"Asset allocation engine running **{opt_model.upper()}** methodology under institutional bounds.")
 
-if not (os.path.exists(er_path) and os.path.exists(weights_path) and os.path.exists(frontier_path)):
-    st.error("Please run the backend engine calculations first (`python main.py`).")
-else:
-    er_df = pd.read_csv(er_path)
-    weights_df = pd.read_csv(weights_path)
-    frontier_df = pd.read_csv(frontier_path)
-    
-    st.subheader("📝 Optimization Setup & Constraints")
-    st.markdown(r"""
-    To match institutional risk management practices, we avoid simple equal weighting or unconstrained historical estimations. We use the **Sequential Least Squares Programming (SLSQP)** algorithm to solve:
+# Active Model Callout
+model_descriptions = {
+    "Sharpe": {
+        "title": "🎯 Maximum Sharpe Ratio (Classical Mean-Variance)",
+        "formula": r"\max_{\mathbf{w}} \frac{\mathbf{w}^{T}\boldsymbol{\mu} - r_f}{\sqrt{\mathbf{w}^{T}\boldsymbol{\Sigma}\mathbf{w}}}",
+        "desc": "Optimizes risk-adjusted excess returns using factor-implied expected alpha and quadratic covariance."
+    },
+    "MinVol": {
+        "title": "🛡️ Minimum Volatility (Capital Preservation)",
+        "formula": r"\min_{\mathbf{w}} \mathbf{w}^{T}\boldsymbol{\Sigma}\mathbf{w}",
+        "desc": "Finds the global minimum variance portfolio on the efficient frontier, prioritizing downside safety."
+    },
+    "HRP": {
+        "title": "🌳 Hierarchical Risk Parity (HRP - Machine Learning Clustering)",
+        "formula": r"\mathbf{w}_{\mathrm{HRP}} = \text{TreeClustering}(\boldsymbol{\Sigma}) \times \text{RecursiveBisection}()",
+        "desc": "Uses hierarchical tree clustering to group correlated assets and allocate risk recursively, avoiding matrix inversion instability."
+    }
+}
 
-$$
-\max_{\mathbf{w}}
-\quad
-\frac{\mathbf{w}^{T}\boldsymbol{\mu} - r_f}
-{\sqrt{\mathbf{w}^{T}\boldsymbol{\Sigma}\mathbf{w}}}
-$$
-    
+curr_desc = model_descriptions.get(opt_model, model_descriptions["Sharpe"])
 
-**Subject to the following institutional constraints:**
+with st.container(border=True):
+    st.markdown(f"### {curr_desc['title']}")
+    st.latex(curr_desc["formula"])
+    st.write(curr_desc["desc"])
+    st.caption("Change the Optimization Model at any time from the sidebar controls on the left.")
 
-- **Fully Invested**:
-  $$
-  \sum_{i=1}^{N} w_i = 100\%
-  $$
+col_left, col_right = st.columns([1, 1])
 
-- **Single Ticker Limits**:
-  $$
-  1\% \leq w_i \leq 10\%
-  $$
-
-- **Sector Limits**:
-  $$
-  \sum_{i \in \mathrm{Sector}} w_i \leq 30\%
-  $$
-        """)
-        
-    st.subheader("🔮 Expected Returns (Factor-Model Derived)")
+with col_left:
+    st.subheader("🔮 Factor-Model Derived Expected Returns")
     st.markdown(
-        r"Rather than using historical averages (which are backward-looking and noisy), expected returns are calculated using a factor-pricing model: "
-        
         r"$\mu_i = r_f + \beta_i \cdot \mathrm{MRP} + (\mathrm{Composite\ Score}_i - 0.5) \cdot 8\%$"
-    )   
-    
-    # Display Expected Returns for selected stocks
-    selected_tickers = weights_df[weights_df['Selected']]['Ticker'].tolist()
-    er_selected = er_df[er_df['Ticker'].isin(selected_tickers)].sort_values(by='ExpectedReturn', ascending=False)
-    
-    st.dataframe(
-        er_selected.style.format({
-            'Composite': '{:.2f}',
-            'ExpectedReturn': '{:.2%}'
-        }).background_gradient(subset=['ExpectedReturn'], cmap='viridis'),
-        use_container_width=True,
-        height=260
     )
-        
+
+    selected_tickers = results["selected_tickers"]
+    selected_factors = factors_df[factors_df["Ticker"].isin(selected_tickers)].copy()
     
-    st.subheader("⚖️ Optimal Portfolio Weights")
-    st.markdown("Optimized weights for the selected 15 assets (the remaining 33 universe assets are assigned 0% weight):")
-    
-    opt_weights = weights_df[weights_df['Selected']].sort_values(by='Weight', ascending=False)
+    selected_factors["Expected Return"] = rf + (0.075 if region == "India" else 0.060) + (selected_factors["Composite"] - 0.5) * 0.08
+    selected_factors = selected_factors.sort_values(by="Expected Return", ascending=False)
+
     st.dataframe(
-        opt_weights.style.format({
-            'Weight': '{:.2%}'
-        }).bar(subset=['Weight'], color='#00C8FF'),
-        use_container_width=True,
-        height=430
+        selected_factors[["Ticker", "Company", "Composite", "Expected Return"]].style.format({
+            "Composite": "{:.2f}",
+            "Expected Return": "{:.2%}"
+        }).background_gradient(subset=["Expected Return"], cmap="viridis"),
+        width="stretch",
+        height=350
     )
-        
-    st.divider()
-    
-    # Efficient Frontier Chart
-    st.subheader("📈 Efficient Frontier Space (Mean-Variance)")
-    st.markdown("Below is the simulated portfolio opportunity set plotted against the calculated Efficient Frontier. The **Optimized Portfolio** represents the Maximum Sharpe Ratio point under the active constraints.")
-    
-    # Separate types
-    sim_points = frontier_df[frontier_df['Type'] == 'Simulated']
-    max_sharpe = frontier_df[frontier_df['Type'] == 'Max Sharpe'].iloc[0]
-    min_vol = frontier_df[frontier_df['Type'] == 'Min Vol'].iloc[0]
-    
-    fig = go.Figure()
-    
-    # Scatter plot of random portfolios
-    fig.add_trace(go.Scatter(
-        x=sim_points['Risk'],
-        y=sim_points['Return'],
-        mode='markers',
-        name='Simulated Portfolios',
+
+with col_right:
+    st.subheader(f"⚖️ Optimal Allocation ({opt_model})")
+    st.markdown(f"Optimized weights assigned across the selected portfolio assets:")
+
+    opt_weights = weights_df[weights_df["Selected"]].sort_values(by="Weight", ascending=False)
+    st.dataframe(
+        opt_weights[["Ticker", "Company", "Sector", "Weight"]].style.format({
+            "Weight": "{:.2%}"
+        }).bar(subset=["Weight"], color="#00E676"),
+        width="stretch",
+        height=350
+    )
+
+st.divider()
+
+# Allocation Donut Chart
+col_pie, col_bar = st.columns([1, 1])
+
+with col_pie:
+    st.subheader("🍩 Asset Allocation Breakdown")
+    fig_pie = px.pie(
+        opt_weights,
+        values="Weight",
+        names="Ticker",
+        title="Asset Weight Distribution",
+        hole=0.45,
+        color_discrete_sequence=px.colors.sequential.Tealgrn_r
+    )
+    fig_pie.update_layout(
+        plot_bgcolor="#161B22",
+        paper_bgcolor="#0E1117",
+        font_color="#FFFFFF"
+    )
+    st.plotly_chart(fig_pie, width="stretch")
+
+with col_bar:
+    st.subheader("🏢 Sector Exposure Breakdown")
+    sector_weights = opt_weights.groupby("Sector")["Weight"].sum().reset_index().sort_values(by="Weight", ascending=True)
+    fig_sec = px.bar(
+        sector_weights,
+        x="Weight",
+        y="Sector",
+        orientation="h",
+        title="Portfolio Sector Concentration",
+        text_auto=".1%",
+        color="Weight",
+        color_continuous_scale="Teal"
+    )
+    fig_sec.update_layout(
+        plot_bgcolor="#161B22",
+        paper_bgcolor="#0E1117",
+        font_color="#FFFFFF",
+        xaxis=dict(showgrid=True, gridcolor="#21262D", tickformat=".0%"),
+        yaxis=dict(showgrid=False)
+    )
+    st.plotly_chart(fig_sec, width="stretch")
+
+st.divider()
+
+# Efficient Frontier Chart
+st.subheader("📈 Modern Portfolio Theory (MPT) Efficient Frontier Space")
+st.markdown("Below is the simulated portfolio opportunity set plotted against the calculated Efficient Frontier. The **Active Factor Portfolio** represents your selected optimization point.")
+
+sim_points = frontier_df[frontier_df["Type"] == "Simulated"]
+max_sharpe_list = frontier_df[frontier_df["Type"] == "Max Sharpe"]
+min_vol_list = frontier_df[frontier_df["Type"] == "Min Vol"]
+
+fig_frontier = go.Figure()
+
+if not sim_points.empty:
+    fig_frontier.add_trace(go.Scatter(
+        x=sim_points["Risk"],
+        y=sim_points["Return"],
+        mode="markers",
+        name="Simulated Portfolios",
         marker=dict(
             size=5,
-            color=(sim_points['Return'] - rf) / sim_points['Risk'],
-            colorscale='Teal_r',
+            color=(sim_points["Return"] - rf) / sim_points["Risk"],
+            colorscale="Teal_r",
             showscale=True,
             colorbar=dict(title="Sharpe Ratio")
         ),
         opacity=0.6
     ))
-    
-    # Highlight Minimum Volatility
-    fig.add_trace(go.Scatter(
-        x=[min_vol['Risk']],
-        y=[min_vol['Return']],
-        mode='markers',
-        name='Min Volatility Portfolio',
-        marker=dict(color='#00FFCC', size=15, symbol='circle')
+
+if not min_vol_list.empty:
+    min_vol = min_vol_list.iloc[0]
+    fig_frontier.add_trace(go.Scatter(
+        x=[min_vol["Risk"]],
+        y=[min_vol["Return"]],
+        mode="markers+text",
+        text=["Min Vol"],
+        textposition="top center",
+        name="Min Volatility Point",
+        marker=dict(color="#00FFCC", size=14, symbol="circle")
     ))
-    
-    # Highlight Max Sharpe (Our Portfolio)
-    fig.add_trace(go.Scatter(
-        x=[max_sharpe['Risk']],
-        y=[max_sharpe['Return']],
-        mode='markers',
-        name='Optimized Factor Portfolio (Max Sharpe)',
-        marker=dict(color='#FFD700', size=18, symbol='star')
+
+if not max_sharpe_list.empty:
+    max_sharpe = max_sharpe_list.iloc[0]
+    fig_frontier.add_trace(go.Scatter(
+        x=[max_sharpe["Risk"]],
+        y=[max_sharpe["Return"]],
+        mode="markers+text",
+        text=["Max Sharpe"],
+        textposition="top center",
+        name="Max Sharpe Point",
+        marker=dict(color="#FFD700", size=18, symbol="star")
     ))
-    
-    fig.update_layout(
-        title="Modern Portfolio Theory (MPT) Efficient Frontier",
-        xaxis_title="Annualized Volatility (Risk)",
-        yaxis_title="Expected Return",
-        plot_bgcolor="#161B22",
-        paper_bgcolor="#0E1117",
-        font_color="#FFFFFF",
-        xaxis=dict(showgrid=True, gridcolor="#21262D"),
-        yaxis=dict(showgrid=True, gridcolor="#21262D", tickformat=".1%"),
-        legend=dict(x=0.02, y=0.98, bgcolor="rgba(0,0,0,0.5)")
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+
+fig_frontier.update_layout(
+    title=f"Efficient Frontier Space — {region} Equity Universe",
+    xaxis_title="Annualized Volatility (Risk)",
+    yaxis_title="Expected Return",
+    plot_bgcolor="#161B22",
+    paper_bgcolor="#0E1117",
+    font_color="#FFFFFF",
+    xaxis=dict(showgrid=True, gridcolor="#21262D", tickformat=".1%"),
+    yaxis=dict(showgrid=True, gridcolor="#21262D", tickformat=".1%"),
+    legend=dict(x=0.02, y=0.98, bgcolor="rgba(0,0,0,0.5)")
+)
+
+st.plotly_chart(fig_frontier, width="stretch")

@@ -1,154 +1,179 @@
+"""
+AlphaForge | Institutional Risk Analytics
+Side-by-side risk decomposition against benchmark, VaR/CVaR, and macroeconomic stress tests.
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import os
+import plotly.graph_objects as go
+
+from helper import inject_custom_theme
+from sidebar import render_sidebar, get_or_run_quant_results
 
 st.set_page_config(page_title="AlphaForge - Risk Analytics", page_icon="🛡️", layout="wide")
+inject_custom_theme()
 
-st.markdown("""
-# 🛡️ Institutional Risk Analytics
-This page compares the portfolio's risk parameters side-by-side with the **Nifty 50 Index (Benchmark)** and provides advanced portfolio metrics (Information Ratio, Treynor Ratio, stress tests).
-""")
+# Render Unified Sidebar
+ticker, company, exchange, period, interval, region = render_sidebar()
 
-reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
-risk_path = os.path.join(reports_dir, "risk.csv")
-performance_path = os.path.join(reports_dir, "performance.csv")
-portfolio_path = os.path.join(reports_dir, "portfolio.csv")
+# Fetch active quantitative factor results
+results = get_or_run_quant_results()
+risk_df = results["risk_df"]
+performance_df = results["performance_df"]
+portfolio_df = results["portfolio_ts"]
+benchmark_name = results.get("benchmark_name", "Nifty 50" if region == "India" else "S&P 500")
+risk_metrics = results["risk_summary"]
+curr_sym = results.get("currency_symbol", "₹" if region == "India" else "$")
 
-if not (os.path.exists(risk_path) and os.path.exists(performance_path) and os.path.exists(portfolio_path)):
-    st.error("Please run the backend engine calculations first (`python main.py`).")
-else:
-    risk_df = pd.read_csv(risk_path)
-    performance_df = pd.read_csv(performance_path)
-    portfolio_df = pd.read_csv(portfolio_path, index_col=0)
-    portfolio_df.index = pd.to_datetime(portfolio_df.index)
-    
-    risk_metrics = risk_df.iloc[0]
-    
-    # 1. Metric Side-by-Side Comparison
-    st.subheader("📊 Portfolio vs. Benchmark Comparison")
-    
-    comparison_data = []
-    for _, row in performance_df.iterrows():
-        metric = row['Metric']
-        p_val = row['Portfolio']
-        b_val = row['Benchmark']
-        diff = p_val - b_val
-        
-        comparison_data.append({
-            'Metric': metric,
-            'Portfolio': p_val,
-            'Nifty 50 (Benchmark)': b_val,
-            'Active Difference': diff
-        })
-        
-    comp_df = pd.DataFrame(comparison_data)
-    st.dataframe(
-        comp_df.style.format({
-            'Portfolio': '{:.2%}',
-            'Nifty 50 (Benchmark)': '{:.2%}',
-            'Active Difference': '{:+.2%}'
-        }).background_gradient(subset=['Active Difference'], cmap='coolwarm'),
-        use_container_width=True
+st.markdown(f"# 🛡️ Institutional Risk Analytics — {region.upper()}")
+st.caption(
+    f"Risk decomposition and stress testing comparing the active portfolio side-by-side with the "
+    f"**{benchmark_name}** benchmark."
+)
+
+# 1. Side-by-Side Comparison
+st.subheader(f"📊 Portfolio vs. {benchmark_name} Metric Comparison")
+
+comparison_data = []
+for _, row in performance_df.iterrows():
+    metric = row["Metric"]
+    p_val = row["Portfolio"]
+    b_val = row["Benchmark"]
+    diff = p_val - b_val
+
+    comparison_data.append({
+        "Metric": metric,
+        "Portfolio Strategy": p_val,
+        f"{benchmark_name} (Benchmark)": b_val,
+        "Active Spread": diff
+    })
+
+comp_df = pd.DataFrame(comparison_data)
+
+st.dataframe(
+    comp_df.style.format({
+        "Portfolio Strategy": "{:.2%}",
+        f"{benchmark_name} (Benchmark)": "{:.2%}",
+        "Active Spread": "{:+.2%}"
+    }).background_gradient(subset=["Active Spread"], cmap="coolwarm"),
+    width="stretch"
+)
+
+st.divider()
+
+# 2. Institutional Risk Metric Tiles
+st.subheader("🛡️ Advanced Institutional Risk Parameters")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        label="Tracking Error (Active Vol)",
+        value=f"{risk_metrics.get('TrackingError', 0):.2%}",
+        help="Annualized standard deviation of active returns (Portfolio - Benchmark)."
     )
-    
-    st.divider()
-    
-    # 2. Advanced Risk Metrics Columns
-    st.subheader("🛡️ Advanced Institutional Risk Metrics")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric(
-            label="Tracking Error (Active Volatility)", 
-            value=f"{risk_metrics['TrackingError']:.2%}",
-            help="Annualized standard deviation of active returns (Portfolio - Benchmark)."
-        )
-        st.metric(
-            label="Downside Deviation", 
-            value=f"{risk_metrics['DownsideDeviation']:.2%}",
-            help="Standard deviation of negative returns only."
-        )
-    with col2:
-        st.metric(
-            label="Information Ratio", 
-            value=f"{risk_metrics['InformationRatio']:.2f}",
-            help="Active Return divided by Tracking Error. Measures the consistency of excess returns."
-        )
-        st.metric(
-            label="Calmar Ratio", 
-            value=f"{risk_metrics['CalmarRatio']:.2f}",
-            help="CAGR divided by Maximum Drawdown."
-        )
-    with col3:
-        st.metric(
-            label="Treynor Ratio", 
-            value=f"{risk_metrics['TreynorRatio']:.2f}",
-            help="Excess CAGR divided by Beta. Measures returns per unit of systematic risk."
-        )
-        st.metric(
-            label="Omega Ratio", 
-            value=f"{risk_metrics['OmegaRatio']:.2f}",
-            help="Weighted ratio of gains to losses."
-        )
-    with col4:
-        st.metric(
-            label="Historical Value at Risk (VaR 95%)", 
-            value=f"{risk_metrics['VaR']:.2%}",
-            help="Maximum expected loss over a single day with 95% confidence."
-        )
-        st.metric(
-            label="Expected Shortfall (CVaR 95%)", 
-            value=f"{risk_metrics['CVaR']:.2%}",
-            help="Average loss in the worst 5% of cases."
-        )
-        
-    st.divider()
-    
-    # 3. Drawdown comparison chart
-    st.subheader("📉 Drawdown Comparison Series")
-    
-    drawdown_df = pd.DataFrame(index=portfolio_df.index)
-    # Re-calculate benchmark drawdown for precise mapping
-    cum_bm = (1 + portfolio_df['Benchmark_Return']).cumprod()
-    peaks_bm = cum_bm.cummax()
-    dd_bm = (cum_bm - peaks_bm) / peaks_bm
-    
-    drawdown_df['Portfolio Drawdown'] = portfolio_df['Drawdown']
-    drawdown_df['Nifty 50 Drawdown'] = dd_bm
-    
-    fig_dd = px.line(
-        drawdown_df, 
-        x=drawdown_df.index, 
-        y=['Portfolio Drawdown', 'Nifty 50 Drawdown'],
-        title="Historical Peak-to-Trough Drawdowns",
-        color_discrete_map={
-            'Portfolio Drawdown': '#00C8FF',
-            'Nifty 50 Drawdown': '#FF5E62'
-        }
+    st.metric(
+        label="Downside Deviation",
+        value=f"{risk_metrics.get('DownsideDeviation', 0):.2%}",
+        help="Standard deviation of negative daily returns only."
     )
-    fig_dd.update_layout(
-        plot_bgcolor="#161B22",
-        paper_bgcolor="#0E1117",
-        font_color="#FFFFFF",
-        xaxis=dict(showgrid=True, gridcolor="#21262D"),
-        yaxis=dict(showgrid=True, gridcolor="#21262D", tickformat=".1%")
+
+with col2:
+    st.metric(
+        label="Information Ratio",
+        value=f"{risk_metrics.get('InformationRatio', 0):.2f}",
+        help="Active Return divided by Tracking Error. Measures consistency of excess return generation."
     )
-    st.plotly_chart(fig_dd, use_container_width=True)
-    
-    st.divider()
-    
-    # 4. Stress Testing Section
-    st.subheader("🌋 Historical Macro Stress Testing Scenario Simulation")
-    
-    # Get portfolio growth value to apply shocks
-    port_end_val = portfolio_df['Portfolio'].iloc[-1]
-    
-    stress_scenarios = [
-        {"Scenario": "Standard Market Crash", "Shock": "Nifty 50 Index drops 30%", "Factor Impact": "-30% Market Drop", "Estimated Portfolio Value": f"₹{port_end_val * 0.763:.2f}", "Decline": "-23.7%"},
-        {"Scenario": "Interest Rate Shock", "Shock": "Yield curve shifts upwards 200 bps", "Factor Impact": "-10% Volatility Decline", "Estimated Portfolio Value": f"₹{port_end_val * 0.98:.2f}", "Decline": "-2.0%"},
-        {"Scenario": "Macro Recession Scenario", "Shock": "Industrial output and growth halts", "Factor Impact": "-20% Composite Drop", "Estimated Portfolio Value": f"₹{port_end_val * 0.841:.2f}", "Decline": "-15.9%"}
-    ]
-    stress_table = pd.DataFrame(stress_scenarios)
-    st.table(stress_table)
+    st.metric(
+        label="Calmar Ratio",
+        value=f"{risk_metrics.get('CalmarRatio', 0):.2f}",
+        help="CAGR divided by Maximum Drawdown."
+    )
+
+with col3:
+    st.metric(
+        label="Treynor Ratio",
+        value=f"{risk_metrics.get('TreynorRatio', 0):.2f}",
+        help="Excess CAGR divided by Beta. Return generated per unit of systematic market risk."
+    )
+    st.metric(
+        label="Omega Ratio",
+        value=f"{risk_metrics.get('OmegaRatio', 0):.2f}",
+        help="Ratio of upside gains to downside losses."
+    )
+
+with col4:
+    st.metric(
+        label="Historical VaR (95% 1-Day)",
+        value=f"{risk_metrics.get('VaR', 0):.2%}",
+        help="Maximum expected 1-day percentage loss with 95% statistical confidence."
+    )
+    st.metric(
+        label="CVaR (Expected Shortfall)",
+        value=f"{risk_metrics.get('CVaR', 0):.2%}",
+        help="Expected average loss on days exceeding the 95% VaR threshold."
+    )
+
+st.divider()
+
+# 3. Daily Returns Distribution & Value at Risk
+st.subheader("📊 Return Distribution & Tail Risk (VaR Threshold)")
+
+port_returns = portfolio_df["Return"]
+var_95 = risk_metrics.get("VaR", 0.015)
+
+fig_hist = px.histogram(
+    port_returns,
+    nbins=60,
+    title="Daily Portfolio Return Distribution vs. 95% Historical VaR",
+    labels={"value": "Daily Return"},
+    color_discrete_sequence=["#38BDF8"]
+)
+fig_hist.add_vline(
+    x=-var_95,
+    line_dash="dash",
+    line_color="#F43F5E",
+    annotation_text=f"VaR (95%): -{var_95:.2%}",
+    annotation_position="top left"
+)
+fig_hist.update_layout(
+    plot_bgcolor="#161B22",
+    paper_bgcolor="#0E1117",
+    font_color="#FFFFFF",
+    xaxis=dict(tickformat=".1%", showgrid=True, gridcolor="#21262D"),
+    yaxis=dict(showgrid=True, gridcolor="#21262D")
+)
+st.plotly_chart(fig_hist, width="stretch")
+
+st.divider()
+
+# 4. Macro Stress Testing Scenarios
+st.subheader("🌪️ Macroeconomic Stress Testing Scenarios")
+st.markdown("Hypothetical impact on current portfolio capitalization under severe market stress conditions:")
+
+final_equity = portfolio_df["Portfolio"].iloc[-1]
+
+stress_scenarios = [
+    {
+        "Scenario": "Global Market Crash (-30%)",
+        "Assumed Market Shock": "-30.0%",
+        "Estimated Equity Impact": f"{curr_sym}{final_equity * 0.70:,.2f}",
+        "Net Drawdown": "-30.0%"
+    },
+    {
+        "Scenario": "Central Bank Rate Shock (-10%)",
+        "Assumed Market Shock": "-10.0%",
+        "Estimated Equity Impact": f"{curr_sym}{final_equity * 0.90:,.2f}",
+        "Net Drawdown": "-10.0%"
+    },
+    {
+        "Scenario": "Macro Recessionary Shock (-20%)",
+        "Assumed Market Shock": "-20.0%",
+        "Estimated Equity Impact": f"{curr_sym}{final_equity * 0.80:,.2f}",
+        "Net Drawdown": "-20.0%"
+    }
+]
+
+st.dataframe(pd.DataFrame(stress_scenarios), width="stretch", hide_index=True)
